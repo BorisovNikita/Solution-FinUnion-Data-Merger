@@ -1,0 +1,64 @@
+@startuml Target_Architecture
+!theme plain
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+title Целевая архитектура данных (To-Be, 12 месяцев)
+
+package "Operational Systems (OLTP)" {
+    [Core Banking] as Core
+    [CRM] as CRM
+    [Card Processing] as Cards
+    [Loan System] as Loans
+}
+
+package "Integration Layer" {
+    [API Gateway] as API
+    [Kafka] as Kafka
+}
+
+package "Master Data Management" {
+    [MDM Customer Hub] as MDM
+}
+
+package "Orchestration" {
+    [Airflow] as Airflow
+}
+
+package "Analytical Platform" {
+    database "DWH (PostgreSQL)" as DWH
+    database "Data Lakehouse (Iceberg)" as Lakehouse
+}
+
+package "Consumption" {
+    [BI] as BI
+    [DataHub / Catalog] as DataHub
+    [Regulator] as Regulator
+}
+
+' Flows
+CRM --> Kafka : CDC / Events
+Core --> Kafka : CDC / Events
+Cards --> Kafka : Events
+Loans --> Kafka : Events
+
+Kafka --> MDM : Client Data (Streaming)
+Kafka --> Lakehouse : Raw Events
+
+MDM --> CRM : Golden Record (Sync)
+MDM --> DWH : Enriched Client Data
+
+Airflow --> Core : Batch Extract
+Airflow --> CRM : Batch Extract
+Airflow --> DWH : Load (ETL/ELT)
+Airflow --> Lakehouse : Load (Batch/Spark)
+
+DWH --> BI : Aggregated Data
+Lakehouse --> BI : Ad-hoc Queries (via Trino)
+
+DWH --> Regulator : Reports
+Lakehouse --> DataHub : Metadata
+DWH --> DataHub : Metadata
+MDM --> DataHub : Metadata
+
+@enduml

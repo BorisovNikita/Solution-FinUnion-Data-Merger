@@ -1,0 +1,14 @@
+@startgantt
+title План миграции FinUnion + RetailBank (12 месяцев)
+
+Project starts 2025-01-01
+
+[Data discovery] lasts 30 days
+[MDM Customer Hub] starts at [Data discovery]'s end and lasts 60 days
+[Единое DWH] starts at [Data discovery]'s end and lasts 60 days
+[Integration Layer and Kafka] starts at [MDM Customer Hub]'s end and lasts 60 days
+[Data Lakehouse] starts at [Integration Layer and Kafka]'s end and lasts 90 days
+[Консолидация АБС и CRM] starts at [Data Lakehouse]'s end and lasts 60 days
+[Финальная сверка и DataHub] starts at [Консолидация АБС и CRM]'s end and lasts 30 days
+
+@endgantt

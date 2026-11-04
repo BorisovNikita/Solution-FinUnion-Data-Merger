@@ -1,0 +1,99 @@
+@startuml DFD_Level_0
+!theme plain
+skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 50
+skinparam ranksep 50
+
+' ==========================================
+' ОПРЕДЕЛЕНИЕ СТИЛЕЙ ДЛЯ СТРОГОЙ DFD
+' ==========================================
+skinparam rectangle {
+    BackgroundColor #F9F9F9
+    BorderColor #333333
+    BorderThickness 1.5
+}
+skinparam usecase {
+    BackgroundColor #E8F4F8
+    BorderColor #005A9C
+    BorderThickness 1.5
+    FontColor #005A9C
+}
+skinparam database {
+    BackgroundColor #FFF4D2
+    BorderColor #B38F00
+    BorderThickness 1.5
+}
+
+title DFD Уровень 0 (Контекстная диаграмма)\nПромежуточное состояние (3 месяца): FinUnion + RetailBank
+
+' ==========================================
+' ВНЕШНИЕ СУЩНОСТИ (Прямоугольники)
+' ==========================================
+package "Внешние системы (As-Is) и Потребители" {
+    rectangle "CRM\nFinUnion" as CRM_FU
+    rectangle "CRM\nRetailBank" as CRM_RB
+    
+    rectangle "Core Banking\nFinUnion" as Core_FU
+    rectangle "Card Processing\nFinUnion" as Card_FU
+    rectangle "Loan System\nFinUnion" as Loan_FU
+    
+    rectangle "Core Banking\nRetailBank" as Core_RB
+    rectangle "Card Processing\nRetailBank" as Card_RB
+    rectangle "Loan System\nRetailBank" as Loan_RB
+    
+    rectangle "BI\n(Потребитель)" as BI
+    rectangle "Регулятор\n(Внешний потребитель)" as Regulator
+}
+
+' ==========================================
+' ПРОЦЕССЫ (Овалы)
+' ==========================================
+usecase "P1. MDM\nCustomer Hub" as MDM_Proc
+usecase "P2. Integration\nLayer (IL)" as IL_Proc
+usecase "P3. Загрузка\nи агрегация DWH" as DWH_Proc
+
+' ==========================================
+' ХРАНИЛИЩА ДАННЫХ (Открытые прямоугольники/Цилиндры)
+' ==========================================
+database "D1: MDM\nGolden Record" as MDM_Store
+database "D2: DWH\nХранилище" as DWH_Store
+database "D3: DataHub /\nКаталог данных" as DataHub_Store
+
+' ==========================================
+' ПОТОКИ ДАННЫХ (Create, Read, Update, Delete, Enrich, Validate, Aggregate)
+' ==========================================
+
+' 1. Клиентские данные (CRM -> MDM)
+CRM_FU --> MDM_Proc : Create / Update / Delete\n(Участвующая сторона)
+CRM_RB --> MDM_Proc : Create / Update / Delete\n(Участвующая сторона)
+
+' 2. Обогащение и чтение (MDM -> CRM)
+MDM_Proc <--> MDM_Store : Read / Write\n(Deduplicate)
+MDM_Proc --> CRM_FU : Read (Enrich)\nGolden Record
+MDM_Proc --> CRM_RB : Read (Enrich)\nGolden Record
+
+' 3. Извлечение из OLTP (Core/Card/Loan -> Integration Layer)
+Core_FU --> IL_Proc : Read (Extract)
+Core_RB --> IL_Proc : Read (Extract)
+Card_FU --> IL_Proc : Read (Extract)
+Card_RB --> IL_Proc : Read (Extract)
+Loan_FU --> IL_Proc : Read (Extract)
+Loan_RB --> IL_Proc : Read (Extract)
+
+' 4. Валидация и загрузка (Integration Layer -> DWH)
+IL_Proc --> DWH_Proc : Validate / Create\n(Транзакции, Счета, Карты)
+DWH_Proc --> DWH_Store : Write (Update)
+
+' 5. Обогащение DWH (MDM -> DWH)
+MDM_Store --> DWH_Proc : Enrich (Клиентский профиль)
+
+' 6. Агрегация и выдача (DWH -> BI / Регулятор)
+DWH_Store --> BI : Read / Aggregate
+DWH_Store --> Regulator : Read (Выгрузка отчетности)
+
+' 7. Метаданные (IL, MDM, DWH -> DataHub)
+IL_Proc --> DataHub_Store : Create / Update (Metadata)
+MDM_Proc --> DataHub_Store : Create / Update (Metadata)
+DWH_Proc --> DataHub_Store : Create / Update (Metadata)
+@enduml
